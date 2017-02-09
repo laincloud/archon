@@ -25,18 +25,21 @@ let ProcRuntimeSection = React.createClass({
             { title: '节点IP', number: false },
             { title: '容器IP', number: false },
             { title: '容器端口', number: true },
+            { title: '实时日志', number: false },
             { title: '环境变量', number: false },
           ]}
-          rows={ _.map(proc.pods, (pod) => [pod.containerid.substring(0, 12), pod.containername, pod.nodeip, pod.containerip, pod.containerport, '点击查看']) }
+          rows={ _.map(proc.pods, (pod) => [pod.containerid.substring(0, 12), pod.containername, pod.nodeip, pod.containerip, pod.containerport, 'LOG', '点击查看']) }
           trStyle={(section, index) => {
             if (section === 'head') return {};
             return theme.colorStyle(proc.pods[index].status === 'True' ? 'success' : 'error');
           }}
           tdClickable={ (rowIndex, colIndex) => {
-            if (colIndex == 0) {
+            switch (colIndex) {
+              case 0:
                 return (evt) => this.openTerminal(proc.pods[rowIndex]);
-            }
-            if (colIndex == 5) {
+              case 5:
+                return (evt) => this.openTerminalAttach(proc.pods[rowIndex]);
+              case 6:
                 return (evt) => this.showPodEnvDialog(proc.pods[rowIndex]);
             }
             return null;
@@ -63,7 +66,7 @@ let ProcRuntimeSection = React.createClass({
           }
         </ul>
       </Dialog>
-    ); 
+    );
     ReactDOM.render(dialog, mountNode);
   },
 
@@ -72,6 +75,13 @@ let ProcRuntimeSection = React.createClass({
     const procName = this.extractFromEnv(podInfo.envs, "LAIN_PROCNAME");
     const instanceNo = this.extractFromEnv(podInfo.envs, "DEPLOYD_POD_INSTANCE_NO");
     window.open(`/archon/apps/${appName}/proc/${procName}/instance/${instanceNo}/enter`, '_blank');
+  },
+
+  openTerminalAttach(podInfo) {
+    const appName = this.extractFromEnv(podInfo.envs, "LAIN_APPNAME");
+    const procName = this.extractFromEnv(podInfo.envs, "LAIN_PROCNAME");
+    const instanceNo = this.extractFromEnv(podInfo.envs, "DEPLOYD_POD_INSTANCE_NO");
+    window.open(`/archon/apps/${appName}/proc/${procName}/instance/${instanceNo}/attach`, '_blank');
   },
 
   extractFromEnv(env, key) {
