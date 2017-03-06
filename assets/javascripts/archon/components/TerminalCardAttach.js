@@ -86,7 +86,8 @@ let TerminalCard = React.createClass({
                 var dec = new TextDecoder("utf-8");
                 var cont = JSON.parse(dec.decode(reader.result));
                 if (cont.msgType != RESPONSE_PING) {
-                    term.write(Base64Tool.Base64.decode(cont.content));
+                    term.write(trim(Base64Tool.Base64.decode(cont.content)));
+                    term.write('\n\r');
                     if (cont.msgType == RESPONSE_CLOSE) {
                         ws.close();
                     }
@@ -139,5 +140,39 @@ let TerminalCard = React.createClass({
 
     },
 });
+
+function trim(s){
+    return trimRight(trimLeft(s));
+}
+
+function trimLeft(s){
+    if(s == null) {
+        return "";
+    }
+    var whitespace = new String(" \t\n\r");
+    var str = new String(s);
+    if (whitespace.indexOf(str.charAt(0)) != -1) {
+        var j=0, i = str.length;
+        while (j < i && whitespace.indexOf(str.charAt(j)) != -1){
+            j++;
+        }
+        str = str.substring(j, i);
+    }
+    return str;
+}
+
+function trimRight(s){
+    if(s == null) return "";
+    var whitespace = new String(" \t\n\r");
+    var str = new String(s);
+    if (whitespace.indexOf(str.charAt(str.length-1)) != -1){
+        var i = str.length - 1;
+        while (i >= 0 && whitespace.indexOf(str.charAt(i)) != -1){
+           i--;
+        }
+        str = str.substring(0, i+1);
+    }
+    return str;
+}
 
 export default TerminalCard;
