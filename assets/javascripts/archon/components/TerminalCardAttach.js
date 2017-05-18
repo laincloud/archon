@@ -86,7 +86,11 @@ let TerminalCard = React.createClass({
                 var dec = new TextDecoder("utf-8");
                 var cont = JSON.parse(dec.decode(reader.result));
                 if (cont.msgType != RESPONSE_PING) {
-                    term.write(Base64Tool.Base64.decode(cont.content));
+                    var msg = Base64Tool.Base64.decode(cont.content);
+                    if (msg.charAt(msg.length - 1) == '\n') {
+                        msg += '\r';
+                    }
+                    term.write(msg);
                     if (cont.msgType == RESPONSE_CLOSE) {
                         ws.close();
                     }
