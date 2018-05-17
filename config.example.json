@@ -1,7 +1,7 @@
 {
-    "api_server": "https://console.${LAIN_DOMAIN}",
-    "sso_server": "https://sso.${LAIN_DOMAIN}",
-    "sso_client_id": ${client_id_in_sso},
-    "entry_server": "wss://entry.${LAIN_DOMAIN}",
-    "log_server": "https://lxcmond.${LAIN_DOMAIN}"
+    "api_server": "https://console.LAIN_DOMAIN",
+    "sso_server": "https://sso.LAIN_DOMAIN",
+    "sso_client_id": "client_id_in_sso",
+    "entry_server": "wss://entry.LAIN_DOMAIN",
+    "log_server": "https://lxcmond.LAIN_DOMAIN"
 }

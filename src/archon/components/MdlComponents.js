@@ -130,7 +130,7 @@ MDL['CardTitle'] = mdlUpgrade(CardTitle);
 
 const CardSupportText = (props) => {
   return (
-    <div className="mdl-card__supporting-text">
+    <div className="mdl-card__supporting-text" style={props.style}>
       {props.children}    
     </div>
   );
@@ -250,7 +250,11 @@ const InputTextField = React.createClass({
   },
 
   getValue() {
-    return this.state.value.trim();
+    if (this.state.value) {
+      return this.state.value.trim();
+    }
+
+    return null;
   },
 
   onInputKeyDown(evt) {

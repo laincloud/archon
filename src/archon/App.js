@@ -41,7 +41,7 @@ let ArchonApp = React.createClass({
 
             <Route path='/authorize/logout' component={UserLogoutPage} />
             <Redirect from='/authorize/complete' to='/' />
-            <Route path='/apps' component={this.connectApi(AppListPage)} />
+            <Route path='/apps' component={this.connectApi(AppListPage)} onEnter={this.onEnterApps}/>
             <Route path='/apps/:name' component={this.connectApi(AppDetailPage)} />
             <Route path='/apps/:name/deploy' component={this.connectApi(AppDeployPage)} />
             <Route path='/apps/:appName/proc/:procName' component={this.connectApi(ProcDetailPage)} />
@@ -55,6 +55,25 @@ let ArchonApp = React.createClass({
         </div>
       </Provider>
     );
+  },
+
+  onEnterApps(nextState, replaceState) {
+    if (window.location.search.length > 0) {
+      const params = new URLSearchParams(window.location.search.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        const expiresIn = params.get('expires_in');
+
+        var cookie = 'ACCESS_TOKEN=' + accessToken;
+        var expires = new Date();
+        expires.setTime(expires.getTime() + expiresIn * 1000);
+        cookie += '; expires=' + expires.toUTCString();
+        cookie += '; Max-Age=' + expiresIn;
+        cookie += '; Path=/';
+        document.cookie = cookie;
+        history.replaceState(null, '/apps');
+      }
+    }
   },
 
   onRouterUpdate() {

@@ -59,3 +59,21 @@ export function procOperation(appName, procName, instance, operation) {
     payload: {appName, procName},
   };
 }
+
+export function patchCanaryProc(appName, procName, action, imageVersion, numInstance, secretFiles) {
+  return {
+    type: 'PATCH_PROC_CANARY_PROC_REQUEST',
+    async: true,
+    shouldCallApi: (state) => true,
+    callApi: () => ProcApi.patchCanaryProc(appName, procName, action, imageVersion, numInstance, secretFiles)
+  };
+}
+
+export function patchCanaryPolicy(appName, procName, action, mountpoints, divType, divData) {
+  return {
+    type: 'PATCH_PROC_CANARY_POLICY_GROUP_REQUEST',
+    async: true,
+    shouldCallApi: (state) => true,
+    callApi: () => ProcApi.patchCanaryPolicy(appName, procName, action, mountpoints, divType, divData)
+  };
+}

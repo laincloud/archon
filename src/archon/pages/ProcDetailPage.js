@@ -12,6 +12,8 @@ import FlashMessageMixin from '../mixins/FlashMessageMixin';
 import ApiMixin from '../mixins/ApiMixin';
 import ProcSummaryCard from '../components/ProcSummaryCard';
 import ProcRuntimePodCard from '../components/ProcRuntimePodCard';
+import ProcScheduleCanaryProcCard from '../components/ProcScheduleCanaryProcCard';
+import ProcScheduleCanaryPolicyCard from '../components/ProcScheduleCanaryPolicyCard';
 import ProcScheduleInstanceCard from '../components/ProcScheduleInstanceCard';
 import ProcScheduleSpecCard from '../components/ProcScheduleSpecCard';
 import AppView from '../models/views/App';
@@ -30,9 +32,19 @@ let ProcDetailPage = React.createClass({
   render() {
     const { appName, procName } = this.getNames();
     const { requests, isFetching, error } = 
-      this.getPageRequests(['GET_APP_REQUEST', 'PATCH_PROC_INSTANCE_REQUEST', 'PATCH_PROC_SPEC_REQUEST', 'REMOVE_PROC_REQUEST', 'DEPLOY_PROC_REQUEST']);
-    const [request, piReq, psReq, rmReq, deployReq] = requests;
+      this.getPageRequests(['GET_APP_REQUEST',
+                            'PATCH_PROC_INSTANCE_REQUEST',
+                            'PATCH_PROC_SPEC_REQUEST',
+                            'REMOVE_PROC_REQUEST',
+                            'DEPLOY_PROC_REQUEST',
+                            'PATCH_PROC_CANARY_PROC_REQUEST',
+                            'PATCH_PROC_CANARY_POLICY_GROUP_REQUEST',
+                            'GET_APPVERSIONS_REQUEST',
+      ]);
+    const [request, piReq, psReq, rmReq, deployReq, patchCanaryProcReq, patchCanaryPolicyReq, getAppVersionsReq] = requests;
     const proc = this.getProc(request);
+    const appVersions = this.getAppVersions(getAppVersionsReq);
+    const currentProcVersion = this.getCurrentProcVersion(proc);
     return (
       <MDL.Grid>
         <MDL.GridCell col={8}>
@@ -40,6 +52,8 @@ let ProcDetailPage = React.createClass({
           { this.renderFlash(psReq.opFlash, AppActions.resetApiFlash('PATCH_PROC_SPEC_REQUEST')) }
           { this.renderFlash(rmReq.opFlash, AppActions.resetApiFlash('REMOVE_PROC_REQUEST')) }
           { this.renderFlash(deployReq.opFlash, AppActions.resetApiFlash('DEPLOY_PROC_REQUEST')) }
+          { this.renderFlash(patchCanaryProcReq.opFlash, AppActions.resetApiFlash('PATCH_PROC_CANARY_PROC_REQUEST')) }
+          { this.renderFlash(patchCanaryPolicyReq.opFlash, AppActions.resetApiFlash('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST')) }
           {
             isFetching || error || !proc ? null :
               <ProcSummaryCard appName={appName} proc={proc} onRefreshClick={this.refreshApp} />
@@ -72,6 +86,23 @@ let ProcDetailPage = React.createClass({
             !this.canAdmin(isFetching, error, proc, true) ? null :
               <ProcScheduleSpecCard cpu={proc.cpu} memory={proc.memory} 
                 doSchedule={(cpu, memory) => this.scheduleSpec(appName, procName, cpu, memory) } />
+          }
+          {
+            !this.canAdmin(isFetching, error, proc, true) || !proc.canary ? null :
+              <ProcScheduleCanaryProcCard
+                imageVersion={proc.canary.canary_proc.image_version}
+                secretFiles={proc.canary.canary_proc.secret_files}
+                procVersions={appVersions}
+                currentProcVersion={currentProcVersion}
+                doSchedule={(action, imageVersion, secretFiles) => this.scheduleCanaryProc(appName, procName, action, imageVersion, secretFiles)}/>
+          }
+          {
+            !this.canAdmin(isFetching, error, proc, true) || !proc.canary ? null :
+              <ProcScheduleCanaryPolicyCard
+                mountpoints={proc.canary.policy_group.mountpoints}
+                divType={proc.canary.policy_group.rules['1'].divtype}
+                divData={proc.canary.policy_group.rules['1'].divdata}
+                doSchedule={(action, mountpoints, divType, divData) => this.scheduleCanaryPolicy(appName, procName, action, mountpoints, divType, divData)}/>
           }
           { 
             !this.canAdmin(isFetching, error, proc, false) ? null :
@@ -111,6 +142,8 @@ let ProcDetailPage = React.createClass({
       dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
       dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
       dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
       dispatch(ProcActions.deploy(appName, procName)); 
     } 
   },
@@ -122,6 +155,8 @@ let ProcDetailPage = React.createClass({
       dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
       dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
       dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
       dispatch(ProcActions.remove(appName, procName));
     }
   },
@@ -133,6 +168,8 @@ let ProcDetailPage = React.createClass({
       dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
       dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
       dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
       dispatch(ProcActions.patchSpec(appName, procName, cpu, memory));
     }
   },
@@ -144,7 +181,35 @@ let ProcDetailPage = React.createClass({
       dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
       dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
       dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
       dispatch(ProcActions.patchInstance(appName, procName, numInstance));
+    }
+  },
+
+  scheduleCanaryProc(appName, procName, action, imageVersion, secretFiles) {
+    if (confirm(`确定要调度灰度 Proc 吗？`)) {
+      const {dispatch} = this.props;
+      dispatch(AppActions.resetApiCall('PATCH_PROC_INSTANCE_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
+      dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
+      dispatch(ProcActions.patchCanaryProc(appName, procName, action, imageVersion, secretFiles));
+    }
+  },
+
+  scheduleCanaryPolicy(appName, procName, action, mountpoints, divType, divData) {
+    if (confirm(`确定要调度灰度策略吗？`)) {
+      const {dispatch} = this.props;
+      dispatch(AppActions.resetApiCall('PATCH_PROC_INSTANCE_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
+      dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
+      dispatch(ProcActions.patchCanaryPolicy(appName, procName, action, mountpoints, divType, divData));
     }
   },
 
@@ -156,7 +221,10 @@ let ProcDetailPage = React.createClass({
       dispatch(AppActions.resetApiCall('PATCH_PROC_SPEC_REQUEST'));
       dispatch(AppActions.resetApiCall('REMOVE_PROC_REQUEST'));
       dispatch(AppActions.resetApiCall('DEPLOY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_PROC_REQUEST'));
+      dispatch(AppActions.resetApiCall('PATCH_PROC_CANARY_POLICY_GROUP_REQUEST'));
       dispatch(AppActions.get(appName));
+      dispatch(AppActions.getVersions(appName));
     } else {
       if (appName) {
         this.history.replaceState(null, `/apps/${appName}`);
@@ -179,10 +247,45 @@ let ProcDetailPage = React.createClass({
       if (index === -1) {
         return null;
       }
-      return ProcView(app.procs[index]);
+      let proc = ProcView(app.procs[index]);
+      if (!procName.endsWith('_canary')) {
+        let canary = app.canaries[procName];
+        const emptyCanaryProc = {};
+        const emptyPolicyGroup ={
+          'rules': {
+            '1': {}
+          }
+        };
+        if (!canary) {
+          canary = {};
+        };
+        if (!canary.canary_proc) {
+          canary.canary_proc = emptyCanaryProc
+        };
+        if (!canary.policy_group) {
+          canary.policy_group = emptyPolicyGroup;
+        };
+        console.log(canary);
+        proc.canary = canary;
+      }
+      return proc;
     }
     return null;
   },
+
+  getAppVersions(request) {
+    if (request.statusCode === 200) {
+      return request.data;
+    }
+  },
+
+  getCurrentProcVersion(proc) {
+    if (proc) {
+      return proc.image.split('release')[1].substring(1);
+    }
+
+    return null;
+  }
 
 });
 

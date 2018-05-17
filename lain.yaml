@@ -8,7 +8,7 @@ build:
       - sed -i 's|security.debian.org|mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list
       - apt-get -y update && apt-get -y install apt-transport-https ca-certificates golang
   script:
-    # - yarn install --verbose
+    - yarn install
     - yarn build
     - mkdir -p /go/src/github.com/laincloud/archon
     - cp -rf main.go /go/src/github.com/laincloud/archon/
