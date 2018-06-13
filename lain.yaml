@@ -1,26 +1,33 @@
-appname: archon # just for travis ci as a test
+appname: archon
 
 build:
-  base: laincloud/centos-lain:20180103
+  base: laincloud/node:9
   prepare:
-    version: "20180103"
     script:
-      - yum clean all
-      - yum update -y
-      - yum install -y gcc-c++
-      - git clone --depth=1 https://github.com/golang/sys.git $GOPATH/src/golang.org/x/sys
-      - git clone --depth=1 https://github.com/golang/net.git $GOPATH/src/golang.org/x/net
-      - go get github.com/mijia/gobuildweb
-      - cd $GOPATH/src/github.com/mijia/gobuildweb && sed -i '/deps = append(deps, "browserify", "coffeeify", "envify", "uglifyify", "babelify", "babel-preset-es2015", "babel-preset-react", "nib", "stylus")/d' cmds.go  && go install
-      - mkdir -p $GOPATH/src/github.com/laincloud/archon
-      - cd $GOPATH/src/github.com/laincloud && cp -r /lain/app/* $GOPATH/src/github.com/laincloud/archon/
+      - sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+      - sed -i 's|security.debian.org|mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list
+      - apt-get -y update && apt-get -y install apt-transport-https ca-certificates golang
   script:
-    - rm -rf $GOPATH/src/github.com/laincloud/archon/*
-    - cp -r /lain/app/* $GOPATH/src/github.com/laincloud/archon/
-    - cd $GOPATH/src/github.com/laincloud/archon && gobuildweb dist
+    - yarn install
+    - yarn build
+    - mkdir -p /go/src/github.com/laincloud/archon
+    - cp -rf main.go /go/src/github.com/laincloud/archon/
+    - GOPATH=/go go install github.com/laincloud/archon
+  volumes:
+    - /lain/app/node_modules
 
-worker:
-  cmd: bash
+release:
+  dest_base: laincloud/debian:stretch
+  copy:
+    - src: /go/bin/archon
+      dest: /lain/app/archon
+    - src: /lain/app/dist
+      dest: /lain/app/dist
+
+web:
+  cmd: /lain/app/archon -port=8080 -staticdir=/lain/app/dist
+  port: 8080
+  memory: 256M
 
 notify:
   slack: "#lain"

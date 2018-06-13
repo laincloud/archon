@@ -1,0 +1,66 @@
+{
+  "name": "archon",
+  "version": "1.0.0",
+  "description": "LAIN Console Frontend",
+  "private": true,
+  "dependencies": {
+    "browserify": "13.3.0",
+    "bufferutil": "1.3.0",
+    "classnames": "^2.2.5",
+    "coffeeify": "2.1.0",
+    "color": "0.10.1",
+    "cookie": "^0.3.1",
+    "envify": "4.0.0",
+    "es5-shim": "^4.5.9",
+    "history": "^1.13.1",
+    "jquery": "^3.3.1",
+    "js-base64": "^2.4.3",
+    "lodash": "^3.6.0",
+    "moment": "^2.17.1",
+    "nib": "1.1.2",
+    "radium": "^0.15.3",
+    "react": "^0.14.1",
+    "react-dom": "^0.14.1",
+    "react-redux": "^4.0.0",
+    "react-router": "^v1.0.0-rc1",
+    "redux": "^3.6.0",
+    "redux-logger": "^2.7.4",
+    "stylus": "0.54.5",
+    "utf-8-validate": "1.2.1",
+    "websocket": "1.0.23",
+    "whatwg-fetch": "^2.0.1",
+    "xterm": "^3.3.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-react": "^6.16.0",
+    "clean-webpack-plugin": "^0.1.19",
+    "file-loader": "^1.1.11",
+    "html-webpack-plugin": "^3.2.0",
+    "uglifyjs-webpack-plugin": "^1.2.5",
+    "webpack": "^4.8.1",
+    "webpack-cli": "^2.1.3",
+    "webpack-dev-server": "^3.1.4",
+    "webpack-merge": "^4.1.2"
+  },
+  "scripts": {
+    "start": "webpack-dev-server --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laincloud/archon.git"
+  },
+  "keywords": [
+    "LAIN",
+    "console"
+  ],
+  "author": "jiami <jiami@creditease.cn>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/laincloud/archon/issues"
+  },
+  "homepage": "https://github.com/laincloud/archon#readme"
+}

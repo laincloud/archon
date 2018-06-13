@@ -1,125 +1,33 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"path"
 	"strings"
 )
 
-const (
-	kTemplateFile = "templates/archon.html"
-	kAssetPrefix  = "public"
-	kTargetFile   = "archon.html"
-)
-
 func main() {
-	var web, mode string
-	var apiServer string
-	var ssoServer string
-	var entryServer string
-	var logServer string
-	var ssoClientId int
-	flag.StringVar(&web, "web", ":9000", "Static file server address")
-	flag.StringVar(&mode, "mode", "compile", "Compile mode or local debug mode")
-	flag.StringVar(&apiServer, "api-server", "", "Specify the api server")
-	flag.StringVar(&ssoServer, "sso-server", "", "Specify the sso server")
-	flag.StringVar(&logServer, "log-server", "", "Specify the log server")
-	flag.StringVar(&entryServer, "entry-server", "", "Specify the entry server")
-	flag.IntVar(&ssoClientId, "sso-client-id", -1, "Specify the sso client id")
+	var port int
+	var staticDir string
+	flag.IntVar(&port, "port", 8080, "The port to listen")
+	flag.StringVar(&staticDir, "staticdir", "", "Static files directory")
 	flag.Parse()
 
-	if apiServer == "" {
-		//log.Fatalf("Please tell me the api server to call.")
-	}
-	if ssoServer == "" {
-		log.Fatalf("Please tell me the sso server to call.")
-	}
-	if ssoClientId == -1 {
-		log.Fatalf("Please tell me the sso client id.")
+	if staticDir == "" {
+		log.Fatal("-staticdir is required")
 	}
 
-	tmpl := template.New("archon.html").Funcs(getTemplateFuncMap())
-	tmpl, err := tmpl.ParseFiles(kTemplateFile)
-	if err != nil {
-		log.Fatalf("Failed to parse the template file: %q, err = %s", kTemplateFile, err)
-	}
-	buffer := new(bytes.Buffer)
-	binding := map[string]interface{}{
-		"ApiServer":   apiServer,
-		"SsoServer":   ssoServer,
-		"SsoClientId": ssoClientId,
-		"EntryServer": entryServer,
-		"LogServer":   logServer,
-	}
-	if err := tmpl.Execute(buffer, binding); err != nil {
-		log.Fatalf("Failed to execute the template, err=%s, binding=%+v", err, binding)
-	}
-	if err := ioutil.WriteFile(kTargetFile, buffer.Bytes(), 0644); err != nil {
-		log.Fatalf("Failed to write to the %q, err=%s", kTargetFile, err)
-	}
-	log.Printf("Template has been compiled: %q", kTargetFile)
-
-	if mode != "compile" {
-		fs := http.FileServer(http.Dir("."))
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/archon") {
-				http.ServeFile(w, r, "archon.html")
-			} else if r.URL.Path == "/" {
-				http.Redirect(w, r, "/archon", http.StatusMovedPermanently)
-			} else {
-				fs.ServeHTTP(w, r)
-			}
-		})
-		log.Printf("Listening to %s ...", web)
-		log.Fatal(http.ListenAndServe(web, nil))
-	}
-}
-
-func getReverseProxy(proxyServer string) *httputil.ReverseProxy {
-	if remote, err := url.Parse(proxyServer); err != nil {
-		log.Fatalf("Failed to parse the proxy server url, %s", err)
-		return nil
-	} else {
-		director := func(r *http.Request) {
-			r.URL.Scheme = remote.Scheme
-			r.URL.Host = remote.Host
-			r.URL.Path = singleJoiningSlash(remote.Path, r.URL.Path)
-			r.Host = remote.Host
-			r.Header.Set("Host", remote.Host)
+	fs := http.FileServer(http.Dir(staticDir))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/assets") {
+			fs.ServeHTTP(w, r)
+		} else {
+			http.ServeFile(w, r, path.Join(staticDir, "index.html"))
 		}
-		return &httputil.ReverseProxy{
-			Director: director,
-		}
-	}
-}
-
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
-}
-
-func getTemplateFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"assets": func(path string) (string, error) {
-			if asset, ok := allAssetsMapping[path]; !ok {
-				return "", fmt.Errorf("Cannot find asset %q", path)
-			} else {
-				return fmt.Sprintf("/%s/%s", kAssetPrefix, asset), nil
-			}
-		},
-	}
+	})
+	log.Printf("Listening to :%d, staticDir: %s...", port, staticDir)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }

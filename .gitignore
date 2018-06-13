@@ -1,14 +1,12 @@
-node_modules
+node_modules/
 assets/stylesheets/sprites/
-public/images/
-public/stylesheets/
-public/javascripts/
 assets_gen.go
 archon-*
 archon.html
 *.log
 .idea/
 archon.iml
-package.json
 main.go.bak
 *DS_Store
+config.json
+.lain-cache/
