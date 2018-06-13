@@ -1,7 +1,7 @@
 import React from "react";
 import MDL from './MdlComponents';
-import Terminal from "xterm";
-import * as fit from "xterm/lib/addons/fit/fit";
+import Xterm from "xterm";
+import "xterm/addons/fit/fit";
 import $ from "jquery";
 import Base64Tool from "js-base64";
 import Cookie from '../models/Cookie';
@@ -50,8 +50,7 @@ let TerminalCard = React.createClass({
     },
 
     initTerminal() {
-        Terminal.applyAddon(fit);
-        var term = new Terminal({
+        var term = new Xterm({
             cursorBlink: true,
         });
         term.open($('#container_terminal')[0]);
